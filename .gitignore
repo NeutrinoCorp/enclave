@@ -19,7 +19,13 @@
 
 # Go workspace file
 go.work
+go.work.sum
 
+# Env files
+.env
+
+# IntelliJ IDEs
 .idea
 
+# Misc
 TODO.txt
