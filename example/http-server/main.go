@@ -11,6 +11,7 @@ import (
 	"github.com/neutrinocorp/geck/securityfx"
 	"github.com/neutrinocorp/geck/transportfx"
 	"github.com/neutrinocorp/geck/validationfx"
+
 	"http-server/pingfx"
 )
 
@@ -20,7 +21,6 @@ func main() {
 	}
 
 	app := fx.New(
-		fx.NopLogger,
 		applicationfx.ApplicationModule,
 		loggingfx.ZerologAppLoggerModule,
 		actuatorfx.ActuatorModule,

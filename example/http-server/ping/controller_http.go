@@ -26,7 +26,7 @@ func (p ControllerHTTP) SetRoutes(e *echo.Echo) {
 	e.GET("/ping", func(c echo.Context) error {
 		p.Logger.Info().Write("got ping")
 		return c.JSON(http.StatusOK, "pong")
-	})
+	}, transport.IsResourceOwnerOrHasAnyAuthoritiesEcho("user_id", "ROLE_ADMIN"))
 }
 
 func (p ControllerHTTP) SetVersionedRoutes(g *echo.Group) {
