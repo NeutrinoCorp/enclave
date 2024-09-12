@@ -28,10 +28,10 @@ func NewEcho(params NewEchoParams) *echo.Echo {
 		OnStart: func(ctx context.Context) error {
 			go func() {
 				if err := e.Start(params.Config.Address); err != nil && !errors.Is(err, http.ErrServerClosed) {
-					params.Logger.WithError(err).Write("failed to start server")
+					params.Logger.WithError(err).WriteWithCtx(ctx, "failed to start server")
 				}
 			}()
-			params.Logger.Info().WithField("address", params.Config.Address).Write("started http server")
+			params.Logger.Info().WithField("address", params.Config.Address).WriteWithCtx(ctx, "started http server")
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {

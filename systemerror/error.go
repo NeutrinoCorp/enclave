@@ -80,7 +80,7 @@ func (e SystemError) Message() string {
 	return e.ErrMessage
 }
 
-// LocalizedMessage returns locale-based error message. Returns Message as fallback value if localized ErrMessage is empty.
+// LocalizedMessage returns locale-based error message. Returns Message as fallback value if localized error is empty.
 func (e SystemError) LocalizedMessage() string {
 	return lo.CoalesceOrEmpty(e.ErrLocalizedMessage, e.ErrMessage)
 }

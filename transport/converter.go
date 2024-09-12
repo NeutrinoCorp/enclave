@@ -41,7 +41,7 @@ func convertSystemErrorEcho(err error) Error {
 	}
 	return Error{
 		Code:    statusCodeHTTPMap[sysErr.Status()],
-		Message: sysErr.Message(),
+		Message: sysErr.LocalizedMessage(),
 		Status:  sysErr.Status().String(),
 		Details: []ErrorDetail{
 			{
