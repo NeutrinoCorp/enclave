@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/neutrinocorp/geck/internal/reflection"
+	"github.com/neutrinocorp/geck/observability/logging"
 	"github.com/neutrinocorp/geck/systemerror"
 )
 
@@ -78,11 +80,11 @@ func convertContainerErrorsEcho(srcErr error) Errors {
 	return errs
 }
 
-func convertErrorEchoJWT(err error) error {
+func convertErrorEchoJWT(ctx context.Context, logger logging.Logger, err error) error {
 	var tokenErr *echojwt.TokenError
 	ok := errors.As(err, &tokenErr)
 	if ok {
-		return err
+		logger.WithError(tokenErr.Err).WriteWithCtx(ctx, "got jwt error")
 	}
 	return systemerror.NewUnauthenticated()
 }

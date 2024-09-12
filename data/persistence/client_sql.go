@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 
-	"github.com/neutrinocorp/geck/logging"
+	"github.com/neutrinocorp/geck/observability/logging"
 )
 
 type ClientSQL interface {

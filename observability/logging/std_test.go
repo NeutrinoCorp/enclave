@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/neutrinocorp/geck/logging"
+	"github.com/neutrinocorp/geck/observability/logging"
 )
 
 func TestStdLogger_Level(t *testing.T) {

@@ -8,7 +8,8 @@ import (
 
 type ConfigHTTP struct {
 	Address                 string   `env:"HTTP_SERVER_ADDRESS" envDefault:":8080"`
-	AuthenticationWhitelist []string `env:"HTTP_SERVER_AUTHENTICATION_WHITELIST" envDefault:"/healthz,/readiness"`
+	AuthenticationWhitelist []string `env:"HTTP_SERVER_AUTHN_WHITELIST" envDefault:"/healthz,/readiness"`
+	RequestIDTargetHeader   string   `env:"HTTP_REQ_ID_TARGET_HEADER" envDefault:"X-Request-ID"`
 
 	AuthenticationWhitelistSet sets.Set[string]
 }

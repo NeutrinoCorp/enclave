@@ -1,10 +1,12 @@
 package security
 
-type ConfigEncryptor struct {
-	SecretKey string `env:"ENCRYPTOR_SECRET_KEY,unset" envDefault:"Some_Page_Token_Key_1927_!@#$*~<"`
-}
-
-type CognitoConfig struct {
+type ConfigCognitoKeys struct {
 	Region     string `env:"COGNITO_REGION" envDefault:"us-east-1"`
 	UserPoolID string `env:"COGNITO_USER_POOL_ID"`
+}
+
+type ConfigJWT struct {
+	SigningMethod string            `env:"JWT_SIGNING_METHOD" envDefault:"HS256"`
+	SigningKey    string            `env:"JWT_SIGNING_KEY,unset"`
+	SigningKeys   map[string]string `env:"JWT_SIGNING_KEYS,unset"`
 }

@@ -10,7 +10,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/neutrinocorp/geck/application"
-	"github.com/neutrinocorp/geck/logging"
+	"github.com/neutrinocorp/geck/observability/logging"
 )
 
 type NewEchoParams struct {
@@ -81,10 +81,12 @@ func RegisterControllersEcho(params RegisterControllersEchoParams) {
 	for _, controller := range params.RootControllers {
 		controller.SetRoutes(params.Echo)
 	}
+	basePath := fmt.Sprintf("/%s", params.Config.Semver.Major)
+	g := params.Echo.Group(basePath)
 	params.Logger.Info().
 		WithField("total_controllers", len(params.VersionedControllers)).
+		WithField("base_path", basePath).
 		Write("registering http versioned controllers")
-	g := params.Echo.Group(fmt.Sprintf("/%s", params.Config.Semver.Major))
 	for _, controller := range params.VersionedControllers {
 		controller.SetRoutes(params.Echo)
 		controller.SetVersionedRoutes(g)

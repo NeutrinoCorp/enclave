@@ -7,7 +7,7 @@ import (
 
 	"github.com/neutrinocorp/geck/actuatorfx"
 	"github.com/neutrinocorp/geck/applicationfx"
-	"github.com/neutrinocorp/geck/loggingfx"
+	"github.com/neutrinocorp/geck/observability/loggingfx"
 	"github.com/neutrinocorp/geck/securityfx"
 	"github.com/neutrinocorp/geck/transportfx"
 	"github.com/neutrinocorp/geck/validationfx"
@@ -27,7 +27,7 @@ func main() {
 		validationfx.GoPlaygroundValidationModule,
 		securityfx.CognitoModule,
 		transportfx.TransportModuleHTTP,
-		transportfx.AmazonCognitoTransportModuleHTTP,
+		transportfx.TransportJWTModuleHTTP,
 		pingfx.PingModule,
 	)
 	app.Run()

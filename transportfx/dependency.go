@@ -3,7 +3,7 @@ package transportfx
 import (
 	"go.uber.org/fx"
 
-	"github.com/neutrinocorp/geck/loggingfx"
+	"github.com/neutrinocorp/geck/observability/loggingfx"
 	"github.com/neutrinocorp/geck/transport"
 )
 
@@ -52,8 +52,9 @@ var TransportModuleHTTP = fx.Module("transport_http",
 	),
 )
 
-var AmazonCognitoTransportModuleHTTP = fx.Module("transport_http_amazon_cognito",
+var TransportJWTModuleHTTP = fx.Module("transport_http_jwt",
 	fx.Provide(
-		AsMiddlewareHTTP(transport.AuthenticateRequestEchoJWT),
+		transport.NewEchoJWTAuthenticatorConfig,
+		AsMiddlewareHTTP(transport.NewEchoJWTAuthenticator),
 	),
 )

@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"context"
 	"errors"
 	"strconv"
 
@@ -9,9 +10,11 @@ import (
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/samber/lo"
 	"go.uber.org/fx"
 
-	"github.com/neutrinocorp/geck/logging"
+	"github.com/neutrinocorp/geck/observability/logging"
+	"github.com/neutrinocorp/geck/observability/tracing"
 	"github.com/neutrinocorp/geck/security"
 )
 
@@ -29,6 +32,30 @@ func HandleEchoError(srcErr error, c echo.Context) {
 
 // General-purposed middlewares
 
+type TraceIDEchoParams struct {
+	fx.In
+	TraceFactory tracing.TraceFactory `optional:"true"`
+}
+
+// NewTraceIDEcho appends a trace identifier to each request using tracing.NewTracedContext.
+func NewTraceIDEcho(params TraceIDEchoParams) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// injects principal in context.Context. Using echo's context won't suffice
+			// as GECK tracing package relies on Go's context.
+			var ctx context.Context
+			if params.TraceFactory != nil {
+				ctx = params.TraceFactory.NewTracedContext(c.Request().Context())
+			} else {
+				ctx = tracing.NewTracedContext(c.Request().Context())
+			}
+			req := c.Request().WithContext(ctx) // uses shallow copy, reducing extra malloc
+			c.SetRequest(req)
+			return next(c)
+		}
+	}
+}
+
 type DefaultEchoMiddlewareParams struct {
 	fx.In
 
@@ -39,17 +66,19 @@ type DefaultEchoMiddlewareParams struct {
 // NewDefaultEchoMiddlewareGroup allocates an Echo middleware group. An array is returned to guarantee
 // ordering within this group. Any other middlewares outside this group will be injected into application in
 // a non-deterministic way (regarding ordering).
-func NewDefaultEchoMiddlewareGroup(params DefaultEchoMiddlewareParams) []echo.MiddlewareFunc {
+func NewDefaultEchoMiddlewareGroup(params DefaultEchoMiddlewareParams, paramsTrace TraceIDEchoParams) []echo.MiddlewareFunc {
 	return []echo.MiddlewareFunc{
-		middleware.RequestID(),
-		LogRequestEcho(params.Logger),
-		RecoverRequestEcho(params.Logger),
+		NewTraceIDEcho(paramsTrace),
+		middleware.RequestIDWithConfig(middleware.RequestIDConfig{
+			TargetHeader: params.Config.RequestIDTargetHeader,
+		}),
+		NewLogRequestEcho(params.Logger),
+		NewRecoverRequestEcho(params.Logger),
 		middleware.Gzip(),
-		// AuthenticateRequestEchoJWT[T](params.Config, params.Logger, params.KeyFuncJWT, params.PrincipalFactory),
 	}
 }
 
-func LogRequestEcho(logger logging.Logger) echo.MiddlewareFunc {
+func NewLogRequestEcho(logger logging.Logger) echo.MiddlewareFunc {
 	return middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
 			var logEvent logging.Event
@@ -60,7 +89,7 @@ func LogRequestEcho(logger logging.Logger) echo.MiddlewareFunc {
 			}
 			bytesIn, _ := strconv.ParseInt(v.ContentLength, 10, 64)
 			logEvent.
-				WithField("id", v.RequestID).
+				WithField("request_id", v.RequestID).
 				WithField("start_time", v.StartTime).
 				WithField("remote_ip", v.RemoteIP).
 				WithField("host", v.Host).
@@ -77,7 +106,7 @@ func LogRequestEcho(logger logging.Logger) echo.MiddlewareFunc {
 				WithField("protocol", v.Protocol).
 				WithField("bytes_in", bytesIn).
 				WithField("bytes_out", v.ResponseSize).
-				Write("got request")
+				WriteWithCtx(c.Request().Context(), "got request")
 			return nil
 		},
 		HandleError:      true,
@@ -99,47 +128,64 @@ func LogRequestEcho(logger logging.Logger) echo.MiddlewareFunc {
 	})
 }
 
-func RecoverRequestEcho(logger logging.Logger) echo.MiddlewareFunc {
+func NewRecoverRequestEcho(logger logging.Logger) echo.MiddlewareFunc {
 	return middleware.RecoverWithConfig(middleware.RecoverConfig{
 		DisableStackAll: true,
 		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
-			logger.WithError(err).WithField("stack", stack).Write("recovered from panic")
+			logger.WithError(err).WithField("stack", stack).WriteWithCtx(c.Request().Context(), "recovered from panic")
 			return err
 		},
 	})
 }
 
-func AuthenticateRequestEchoJWT(cfg ConfigHTTP, logger logging.Logger, keyFuncJWT keyfunc.Keyfunc,
-	factory security.PrincipalFactory[*jwt.Token]) echo.MiddlewareFunc {
-	return echojwt.WithConfig(echojwt.Config{
+type NewEchoJWTAuthenticatorConfigParams struct {
+	fx.In
+
+	Config           security.ConfigJWT
+	ServerConfig     ConfigHTTP
+	Logger           logging.Logger
+	PrincipalFactory security.PrincipalFactory[*jwt.Token]
+	KeyFunc          keyfunc.Keyfunc `optional:"true"`
+}
+
+func NewEchoJWTAuthenticatorConfig(params NewEchoJWTAuthenticatorConfigParams) echojwt.Config {
+	return echojwt.Config{
 		Skipper: func(c echo.Context) bool {
-			return cfg.AuthenticationWhitelistSet.Contains(c.Request().RequestURI)
+			return params.ServerConfig.AuthenticationWhitelistSet.Contains(c.Request().RequestURI)
 		},
 		SuccessHandler: func(c echo.Context) {
 			// injects principal in context.Context. Using echo's context won't suffice
 			// as PrincipalFactory relies on Go's context.
 			token, ok := c.Get("user").(*jwt.Token)
 			if !ok {
-				logger.
+				params.Logger.
 					WithError(errors.New("transport: cannot cast jwt token from echo context")).
-					Write("could not create principal context")
+					WriteWithCtx(c.Request().Context(), "could not create principal context")
 				return
 			}
 
-			ctx, err := factory.NewContextWithPrincipal(c.Request().Context(), token)
+			ctx, err := params.PrincipalFactory.NewContextWithPrincipal(c.Request().Context(), token)
 			if err != nil {
-				logger.WithError(err).Write("could not create principal context")
+				params.Logger.WithError(err).WriteWithCtx(c.Request().Context(), "could not create principal context")
 				return
 			}
 			req := c.Request().WithContext(ctx) // uses shallow copy, reducing extra malloc
 			c.SetRequest(req)
 		},
 		ErrorHandler: func(c echo.Context, err error) error {
-			return convertErrorEchoJWT(err)
+			return convertErrorEchoJWT(c.Request().Context(), params.Logger, err)
 		},
-		SigningMethod: "RS256",
-		KeyFunc:       keyFuncJWT.Keyfunc,
-	})
+		SigningMethod: params.Config.SigningMethod,
+		SigningKey:    params.Config.SigningKey,
+		SigningKeys: lo.MapEntries(params.Config.SigningKeys, func(key string, value string) (string, any) {
+			return key, value
+		}),
+		KeyFunc: params.KeyFunc.Keyfunc,
+	}
+}
+
+func NewEchoJWTAuthenticator(config echojwt.Config) echo.MiddlewareFunc {
+	return echojwt.WithConfig(config)
 }
 
 // Authorization middlewares

@@ -1,5 +1,7 @@
 package logging
 
+import "context"
+
 // Level is a piece of information telling how important a given log message is.
 type Level uint8
 
@@ -23,6 +25,10 @@ type Event interface {
 	WithField(field string, val any) Event
 	// Write writes a new log entry into the Logger instance (most probably will write to an underlying io.Writer instance).
 	Write(msg string)
+	// WriteWithCtx writes a new log entry into the Logger instance (most probably will write to an underlying io.Writer instance).
+	//
+	// Uses context.Context to retrieve (and possibly append) useful information like trace identifiers.
+	WriteWithCtx(ctx context.Context, msg string)
 }
 
 // A Logger is used to log messages for a specific system or application component.

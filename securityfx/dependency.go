@@ -7,28 +7,24 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/neutrinocorp/geck/security"
-	"github.com/neutrinocorp/geck/security/encryption"
 )
 
-var EncryptorAESModule = fx.Module("encryptor_aes",
+var GenericJWTModule = fx.Module("generic_jwt",
 	fx.Provide(
-		env.ParseAs[security.ConfigEncryptor],
-		fx.Annotate(
-			encryption.NewEncryptorAES,
-			fx.As(new(encryption.Encryptor)),
-		),
+		env.ParseAs[security.ConfigJWT],
 	),
 )
 
 var CognitoModule = fx.Module("amazon_cognito",
 	fx.Provide(
-		env.ParseAs[security.CognitoConfig],
+		env.ParseAs[security.ConfigCognitoKeys],
 		fx.Annotate(
 			security.NewAmazonCognitoKeysJWK,
 			fx.As(new(keyfunc.Keyfunc)),
 		),
+		security.NewConfigCognitoJWT,
 		fx.Annotate(
-			security.NewPrincipalFactoryCognito,
+			security.NewPrincipalManagerCognito,
 			fx.As(new(security.PrincipalFactory[*jwt.Token])),
 		),
 	),

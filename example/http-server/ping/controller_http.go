@@ -5,7 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/neutrinocorp/geck/logging"
+	"github.com/neutrinocorp/geck/observability/logging"
 	"github.com/neutrinocorp/geck/systemerror"
 	"github.com/neutrinocorp/geck/transport"
 )
@@ -24,14 +24,14 @@ func NewControllerHTTP(logger logging.Logger) ControllerHTTP {
 
 func (p ControllerHTTP) SetRoutes(e *echo.Echo) {
 	e.GET("/ping", func(c echo.Context) error {
-		p.Logger.Info().Write("got ping")
+		p.Logger.Info().WriteWithCtx(c.Request().Context(), "got ping")
 		return c.JSON(http.StatusOK, "pong")
 	}, transport.IsResourceOwnerOrHasAnyAuthoritiesEcho("user_id", "ROLE_ADMIN"))
 }
 
 func (p ControllerHTTP) SetVersionedRoutes(g *echo.Group) {
 	g.GET("/ping", func(c echo.Context) error {
-		p.Logger.Info().Write("got versioned-ping")
+		p.Logger.Info().WriteWithCtx(c.Request().Context(), "got versioned-ping")
 		return systemerror.NewResourceNotFound[string]("foo")
 	})
 }

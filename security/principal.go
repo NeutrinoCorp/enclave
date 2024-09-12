@@ -11,27 +11,27 @@ type Principal interface {
 	Authorities() sets.Set[string]
 }
 
-type BasicPrincipal struct {
+type PrincipalTemplate struct {
 	Identifier   string
 	Subject      string
 	User         string
 	AuthoritySet sets.Set[string]
 }
 
-var _ Principal = (*BasicPrincipal)(nil)
+var _ Principal = (*PrincipalTemplate)(nil)
 
-func (b BasicPrincipal) ID() string {
+func (b PrincipalTemplate) ID() string {
 	return b.Identifier
 }
 
-func (b BasicPrincipal) Sub() string {
+func (b PrincipalTemplate) Sub() string {
 	return b.Subject
 }
 
-func (b BasicPrincipal) Username() string {
+func (b PrincipalTemplate) Username() string {
 	return b.User
 }
 
-func (b BasicPrincipal) Authorities() sets.Set[string] {
+func (b PrincipalTemplate) Authorities() sets.Set[string] {
 	return b.AuthoritySet
 }

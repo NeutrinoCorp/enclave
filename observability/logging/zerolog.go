@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"context"
 	"io"
 	"net"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/neutrinocorp/geck/application"
+	"github.com/neutrinocorp/geck/observability/tracing"
 )
 
 // NewApplicationLogger allocates a zerolog.Logger instance with configuration.Application fields.
@@ -93,6 +95,16 @@ func (z ZerologEvent) WithField(field string, val any) Event {
 // Write writes a new log entry into the Logger instance (most probably will write to an underlying io.Writer instance).
 func (z ZerologEvent) Write(msg string) {
 	z.ev.Msg(msg)
+}
+
+// WriteWithCtx writes a new log entry into the Logger instance (most probably will write to an underlying io.Writer instance).
+//
+// Uses context.Context to retrieve (and possibly append) useful information like trace identifiers.
+func (z ZerologEvent) WriteWithCtx(ctx context.Context, msg string) {
+	if traceID, _ := tracing.GetTraceIDFromContext(ctx); traceID != "" {
+		z.WithField("trace_id", traceID)
+	}
+	z.Write(msg)
 }
 
 // ZerologLogger is the zerolog implementation of Logger.

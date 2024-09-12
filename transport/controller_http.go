@@ -7,7 +7,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/neutrinocorp/geck/actuator"
-	"github.com/neutrinocorp/geck/logging"
+	"github.com/neutrinocorp/geck/observability/logging"
 )
 
 type ControllerHTTP interface {
@@ -50,7 +50,7 @@ func (a ActuatorControllerHTTP) SetRoutes(e *echo.Echo) {
 	// These endpoints are protected as they expose system sensitive data and
 	// attackers can potentially use it against running system.
 	//
-	// Health and readiness endpoints are still available without requiring any kind of authn and authz,
+	// Health and readiness endpoints are still available without requiring any kind of authN and authZ,
 	// specially made for container orchestrator/load balancer/proxy tasks which require health-checking and more.
 	e.GET("/actuator/health", a.getHealth,
 		HasAnyAuthoritiesEcho(a.Config.ActuatorRoleAllowlist...))

@@ -1,9 +1,12 @@
 package logging
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/neutrinocorp/geck/observability/tracing"
 )
 
 // StdEvent is standard library (log.Logger) the implementation of Event.
@@ -57,6 +60,16 @@ func (s *StdEvent) Write(msg string) {
 	}
 
 	s.logger.Printf("%s %s message:%q", lvl, buf.String(), msg)
+}
+
+// WriteWithCtx writes a new log entry into the Logger instance (most probably will write to an underlying io.Writer instance).
+//
+// Uses context.Context to retrieve (and possibly append) useful information like trace identifiers.
+func (s *StdEvent) WriteWithCtx(ctx context.Context, msg string) {
+	if traceID, _ := tracing.GetTraceIDFromContext(ctx); traceID != "" {
+		s.WithField("trace_id", traceID)
+	}
+	s.Write(msg)
 }
 
 // StdLogger is the standard library (log.Logger) implementation of Logger.

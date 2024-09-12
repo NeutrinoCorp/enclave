@@ -6,8 +6,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-
-	"github.com/neutrinocorp/geck/security"
 )
 
 type EncryptorAES struct {
@@ -16,7 +14,7 @@ type EncryptorAES struct {
 
 var _ Encryptor = (*EncryptorAES)(nil)
 
-func NewEncryptorAES(cfg security.ConfigEncryptor) EncryptorAES {
+func NewEncryptorAES(cfg ConfigEncryptor) EncryptorAES {
 	return EncryptorAES{
 		SecretKey: cfg.SecretKey,
 	}
